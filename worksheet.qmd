@@ -2,17 +2,14 @@
 format: typst
 ---
 
-# Lab 4 Worksheet - Practice
+```{r}
+install.packages("stringr")
+library(stringr)
+install.packages("tidyverse")
+library(tidyverse)
+```
 
-* add something about loading a csv and having to use
-# Split the one column into four
-energy_raw <- separate(
-  energy_raw,
-  col = 1,
-  into = c("State", "2021", "2022", "2023"),
-  sep = ","
-)
-* make sure str extract is clear str_extract(.x, "\\d+\\.?\\d*")
+# Lab 4 Worksheet - Practice
 
 #### Q1. Extract and clean text patterns from strings using regular expressions.
 
@@ -25,29 +22,32 @@ energy_sources <- c("Solar (MWh)", "Wind (GWh)", "Coal (MWh)", "Hydro (kWh)")
 a.  Use str_detect() to identify all energy sources that contain the substring "Wind" or "Hydro" (hint: use the \| operator in regex).
 
 ```{r}
-
+str_detect(energy_sources, pattern = "Wind|Hydro")
 ```
 
 b.  Extract the unit type (e.g., MWh, GWh, kWh) using str_extract(). Make sure your pattern handles extra spaces or hyphens.
 
 ```{r}
-
+str_extract(energy_sources, pattern = ".Wh")
 ```
 
 c.  Clean the names to keep only the energy source name, trimming whitespace and removing parentheses.
 
 ```{r}
-
+energy_sources <- c("Solar", "Wind", "Coal", "Hydro")
+# str_removeall(energy_sources, "\\s*\\(.*\\)")
 ```
 
 d.  Create a clean tibble called energy_clean with two columns: source and unit.
 
 ```{r}
-
+energy_clean <- tibble(source = energy_sources, unit = str_extract(energy_sources, pattern = ".Wh"))
+energy_clean
 ```
 
 e.  Discussion: Why might regex cleaning be important before performing joins or aggregations?\
     \
+    Regex is important before performing joins or aggregations because we cannot join or aggregate across equivalent rows/columns if the data is not standardized, and thus cannot be matched.
 
 #### Q2. State Datasets: Joins and Pivots
 
@@ -76,7 +76,7 @@ states
 a.  Perform a left join to combine socioeconomic and regional data.
 
 ```{r}
-
+left_join()
 ```
 
 b.  Perform an inner join. How many rows remain, and why is it the same or different?
@@ -84,7 +84,6 @@ b.  Perform an inner join. How many rows remain, and why is it the same or diffe
 ```{r}
 
 ```
-
 
 c.  Perform an anti join to check if any state names don’t match between datasets. What might cause mismatches like this in real projects?
 
@@ -94,7 +93,7 @@ c.  Perform an anti join to check if any state names don’t match between datas
 
 d.  Discussion: Why would you prefer a left join over an inner join when merging state-level datasets?\
     \
-e. Use pivot_longer() to make the socioeconomic data longer.\
+e.  Use pivot_longer() to make the socioeconomic data longer.\
 
 ```{r}
 
@@ -118,22 +117,24 @@ sales <- tibble(
 sales
 ```
 
-a. Convert the dataset from wide (one column per month) to long (one row per month per store).
+a.  Convert the dataset from wide (one column per month) to long (one row per month per store).
 
 ```{r}
-
+sales <- pivot_longer(sales, cols = c("Jan_Sales", "Feb_Sales", "Mar_Sales"), names_to = "Month", values_to = "Sales")
+sales
 ```
 
-b. Clean month names by removing _Sales.
+b.  Clean month names by removing \_Sales.
 
 ```{r}
-
+sales$Month <- str_sub(sales$Month, start = 1, end = 3)
+sales
 ```
 
-c. Convert the long dataset back to wide, with one column per month.
+c.  Convert the long dataset back to wide, with one column per month.
 
 ```{r}
-
+pivot_wider(sales, names_from = "Month", values_from = "Sales")
 ```
 
 #### Q3. Mapping

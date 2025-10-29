@@ -8,27 +8,68 @@ format: typst
 ## **Part 0: libraries**
 
 ```{r}
-
+#| echo: false
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(sf)
+library(rnaturalearth)
 ```
 
 ## **Part 1:** **Defining Research Question**
 
-Chosen Question:
+Chosen Question: How, if at all, does electric vehicle usage impact renewable energy usage? To explore this question, I will compare the electric vehicle registrations by state for 2023 to renewable energy use by state for 2023. 
 
 ## **Part 2: Data Preparation and Cleaning**
 
 ```{r}
+#| echo: false
+# ev-registrations-by-state-2023.csv dataset
+ev_reg_23 <- read.csv("~/Downloads/stat133/labproject4/ev-power-claireshintani/data/ev-registrations-by-state-2023.csv")
+colnames(ev_reg_23) <- c("State", "Count_EVs")
+ev_reg_23 <- ev_reg_23 |> slice(-(1:2))
+ev_reg_23$Count_EVs <- str_remove_all(ev_reg_23$Count_EVs, "[\\D]")
+ev_reg_23$Count_EVs <- as.numeric(ev_reg_23$Count_EVs)
+ev_reg_23$State <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "Total")
+ev_reg_23 <- ev_reg_23 |> slice(-52)
+head(ev_reg_23)
 
+# renew-use-2023 dataset
+renew_use_23 <- read.csv("~/Downloads/stat133/labproject4/ev-power-claireshintani/data/renew-use-2023.csv")
+renew_use_23$State <- str_to_upper(renew_use_23$State)
+renew_use_23$Renewable_Use_2023 <- str_remove_all(renew_use_23$Renewable_Use_2023, "[a-zA-Z]")
+renew_use_23$Renewable_Use_2023 <- as.integer(renew_use_23$Renewable_Use_2023)
+renew_use_23 <- renew_use_23 |> select(-2)
+renew_use_23 <- renew_use_23 |> group_by(State) |> summarize(Total_Renew = sum(Renewable_Use_2023))
+renew_use_23 <- renew_use_23 |> slice(-45)
+head(renew_use_23)
 ```
 
 ## **Part 3: Joining / Pivoting Datasets for Analysis**
+I chose to join the renewable energy usage by state dataset for 2023 with the electric vehicles registration by state dataset for 2023. If electric vehicles are truly powered by clean sources, as asked by the main research question, then renewable energy use by state and year should increase with electric vehicle usage. I joined the two datasets by their "State" column so that each state has a designated row with a column for the number of electric vehicles registered there and a column for the total renewable energy use for the state. I also added a third column, which is the ratio of  electric vehicle count to the total renewable energy use for each state to get a baseline at which to compare the states.
 
 ```{r}
-
+#| echo: false
+dataset <- left_join(ev_reg_23, renew_use_23, join_by("State" == "State"))
+dataset <- dataset |> mutate(EV_to_Renew = Count_EVs/Total_Renew)
+head(dataset)
 ```
 
 ## **Part 4: Mapping Visualization**
 
 ```{r}
+#| echo: false
+map_us <- ne_states(country = "united states of america", returnclass= "sf")
+map_us |> select(name, postal)
 
+map_us_joined <- left_join(map_us, dataset, join_by(postal == State)) 
+head(map_us_joined)
+
+ggplot(map_us_joined) + geom_sf(aes(fill = EV_to_Renew), color = "white") + scale_fill_gradient(low = "lightgreen", high = "darkgreen") + labs(title = "2023 EV Registration Count to Renewable Energy Usage by State", fill = "EV Registration Count / Renewable Energy Usage (kWh)") + theme(plot.title = element_text(size = 8)) + theme(legend.title = element_text(size = 5))
 ```
+
+## **Conclusion**
+The map produced above demonstrates that states along the East and West Coasts, and near the ocean (including D.C., New Jersey, Maryland, Hawaii, California, Delaware, and Utah) have a higher electricle vehicle registration count to renewable energy usage ratio, as demonstrated by their darker coloring along the light green to dark green gradient. This indicates that they use more renewable energy per electric vehicle registered. Contrary to my hypothesis, which was that renewable energy use by state and year should increase with electric vehicle usage, the states with the highest ratio were not also the states with the highest number of electrical vehicle registrations.
+
+A few factors could potentially describe the phenomenon I see in the map above. First, there may be different car regulations in these states that require their electric vehicles to be powered by truly renewable energy sources, accounting for this difference in the ratio. Another observation is that this difference in ratios is largely along partisan lines - most of the states with the highest ratio are Democratic-leaning, potentially suggesting increased value placed upon the environment and climate-friendly measures and purchasing choices. 
